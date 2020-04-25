@@ -70,6 +70,9 @@ class Container extends Component {
 		if(this.hasAuth()){
 			this.setState({loading:true})
 			await this.getQueries()
+			this.state.queries.forEach(q => {
+				q.name = q.sortKey.substring(0,q.sortKey.indexOf('|'))
+			})
 			this.setState({loading:false})
 		}
 	}
@@ -101,7 +104,7 @@ class Container extends Component {
 				),
 				this.state.queries.map(q => h('div',{class:'card mt-2'},
 					h('div',{class:'card-header text-center'},
-						h('div',{class:'card-title h5'},q.sortKey)
+						h('div',{class:'card-title h5'},q.name)
 					),
 					h('div',{class:'card-body text-center'},
 						h('label',{class:"form-checkbox d-inline"},
