@@ -40,8 +40,7 @@ const buildQueries = (filters) => {
 				return a
 			}
 			q = q.slice(0,2)
-		}
-		if(!multi.includes(f.comparator)){
+		}else if(!multi.includes(f.comparator)){
 			q = q[0]
 		}
 		a[f.name] = {[f.comparator]:q}
