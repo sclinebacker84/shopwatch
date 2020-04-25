@@ -61,6 +61,7 @@ class Container extends Component {
 				}
 			}
 		}).promise()
+		r.Items.forEach(q => q.name = q.sortKey.substring(0,q.sortKey.indexOf('|')))
 		this.state.queries = this.state.queries.concat(r.Items)
 		if(r.LastEvaluatedKey){
 			this.getQueries(r.LastEvaluatedKey)
@@ -70,9 +71,6 @@ class Container extends Component {
 		if(this.hasAuth()){
 			this.setState({loading:true})
 			await this.getQueries()
-			this.state.queries.forEach(q => {
-				q.name = q.sortKey.substring(0,q.sortKey.indexOf('|'))
-			})
 			this.setState({loading:false})
 		}
 	}
