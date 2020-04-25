@@ -214,13 +214,15 @@ class Filter extends Component {
 		for(let i = 0 ; i < this.state.pairs.length ; i++){
 			const p = this.state.pairs[i]
 			const r = await listFiles(this.props.apiKey, p.store, p.category)
-			const f = await getFile(this.props.apiKey, r.files[0].id)
-			if(f.items.length){
-				Object.keys(f.items[0]).forEach(k => {
-					fields.set(k, fields.get(k) || {from:[],type:typeof f.items.find(i => i[k] !== undefined && i[k] !== null)[k]})
-					fields.get(k).from.push(p)
-				})
-				this.state.data.insert(f.items)
+			if(r.files.length){
+				const f = await getFile(this.props.apiKey, r.files[0].id)
+				if(f.items.length){
+					Object.keys(f.items[0]).forEach(k => {
+						fields.set(k, fields.get(k) || {from:[],type:typeof f.items.find(i => i[k] !== undefined && i[k] !== null)[k]})
+						fields.get(k).from.push(p)
+					})
+					this.state.data.insert(f.items)
+				}
 			}
 		}
 		this.setState({loading:false})
