@@ -107,11 +107,34 @@ class Container extends Component {
 						h('div',{class:'card-title h5'},q.name)
 					),
 					h('div',{class:'card-body text-center'},
-						h('label',{class:"form-checkbox d-inline"},
-					    	h('input',{type:"checkbox",checked:q.checked,onInput:e => this.select(q,e)}),
-					    	h('i',{class:"form-icon"}),
-					    	'Select for Deletion?'
-					    )
+						h('div',undefined,
+							h('label',{class:"form-checkbox d-inline"},
+						    	h('input',{type:"checkbox",checked:q.checked,onInput:e => this.select(q,e)}),
+						    	h('i',{class:"form-icon"}),
+						    	'Select for Deletion?'
+						    )
+						),
+						h('div',{class:'divider','data-content':'Selected Fields'}),
+						h('div',undefined,
+							q.select.map(s => h('span',{class:'chip mr-1'},s))
+						),
+						!!q.sort && [
+							h('div',{class:'divider','data-content':'Sorting'}),
+							h('div',undefined,
+								h('span',{class:'chip'},q.sort.name),
+								h('span',{class:'chip'},q.sort.order)
+							)
+						],
+						!!q.find && [
+							h('div',{class:'divider','data-content':'Filter'}),
+							h('div',{class:'columns'},
+								h('div',{class:'column col-4 col-mx-auto'},
+									h('pre',{class:'text-left',style:'height:10em ; overflow-y: auto'},
+										JSON.stringify(q.find,null,2)
+									)
+								)
+							)
+						]
 					),
 					h('div',{class:'card-footer text-center'},
 						h('div',{class:'columns'},

@@ -29,14 +29,19 @@ const getFile = async (apiKey, id) => {
 }
 
 const buildQueries = (filters) => {
+	const multi = ['$in','$nin','$containsAny']
 	return filters.filter(f => f.name && f.comparator && f.type && f.value).reduce((a,f) => {
 		let q = f.value.split('\n')
 		if(f.type === 'number'){
 			q = q.map(v => parseFloat(v))
 		}
-		if(f.comparator === '$in'){
-			
-		}else{
+		if(f.comparator === '$between'){
+			if(q.length < 2){
+				return a
+			}
+			q = q.slice(0,2)
+		}
+		if(!multi.includes(f.comparator)){
 			q = q[0]
 		}
 		a[f.name] = {[f.comparator]:q}
@@ -122,6 +127,11 @@ class Stores extends Component {
 
 class Table extends Component {
 	render(){
+		const data = this.props.data
+		const coeff = (this.props.sort.desc ? -1 : 1)
+		if(this.props.sort.name){
+			data.sort((a,b) => a[this.props.sort.name] > b[this.props.sort.name] ? 1*coeff : -1*coeff)
+		}
 		return h('table',{class:'table table-striped table-scroll',style:'height:30em ; overflow-y:auto'},
 			h('thead',undefined,
 				h('tr',undefined,
@@ -129,7 +139,7 @@ class Table extends Component {
 				)
 			),
 			h('tbody',undefined,
-				this.props.data.map(r => h('tr',undefined,
+				data.map(r => h('tr',undefined,
 					this.props.fields.map(f => h('td',undefined,r[f.name]))
 				))
 			)
@@ -145,17 +155,35 @@ class Filter extends Component {
 		this.state.data.clear()
 		this.state.comparators = [
 			{
-				name:'equals',
+				name:'equal to',
 				value:'$eq'
 			},
 			{
-				name:'any of the following',
+				name:'not equal to',
+				value:'$ne'
+			},
+			{
+				name:'in any of the following',
 				value:'$in'
 			},
 			{
-				name:'contains',
+				name:'not in any of the following',
+				value:'$nin'
+			},
+			{
+				name:'contains the word',
 				value:'$contains',
 				type:['string']
+			},
+			{
+				name:'contains any of the following words',
+				value:'$containsAny',
+				type:['string']
+			},
+			{
+				name:'is between',
+				value:'$between',
+				type:['number']
 			},
 			{
 				name:'greater than',
@@ -230,8 +258,10 @@ class Filter extends Component {
 		this.setState(this.state)
 	}
 	render(){
+		const data = this.state.data.find(this.state.query)
 		return h('div',undefined,
 			this.state.loading ? h(Loading) : h('div',undefined,
+				h('div',{class:'divider text-center','data-content':'Filters'}),
 				h('div',{class:'mt-1'},
 					this.props.filters.map((f,i) => h('div',{class:'columns'},
 						h('div',{class:'column col-3'},
@@ -256,6 +286,7 @@ class Filter extends Component {
 						!!this.props.filters.length && h('button',{class:'btn',onClick:e => this.preview()},'Preview')
 					)
 				),
+				h('div',{class:'divider text-center','data-content':'Fields'}),
 				h('div',{class:'text-center'},
 					this.props.fields.map(f => h('label',{class:"form-checkbox mr-1 d-inline"},
 				    	h('input',{type:"checkbox",checked:f.checked,onInput:e => this.toggle(f,e)}),
@@ -263,6 +294,7 @@ class Filter extends Component {
 				    	f.name
 				    ))
 				),
+				h('div',{class:'divider text-center','data-content':'Sort'}),
 				h('div',{class:'columns'},
 					h('div',{class:'column col-10'},
 						h('select',{class:'form-select',value:this.props.sort.name,onInput:e => this.updateSort('name',e.target.value)},
@@ -277,7 +309,8 @@ class Filter extends Component {
 					    )
 					)
 				),
-				h(Table,{fields:this.props.fields.filter(f => f.checked), data:this.state.data.find(this.state.query)})
+				h('div',{class:'divider text-center','data-content':`Data Preview (${data.length} results)`}),
+				h(Table,{fields:this.props.fields.filter(f => f.checked), data:data, sort:this.props.sort})
 			)
 		)
 	}
@@ -293,13 +326,15 @@ class Review extends Component{
 	}
 	async save(e){
 		e.preventDefault()
+		this.props.sort.order = this.props.sort.desc ? 'desc' : 'asc'
 		const payload = {token:window.localStorage.getItem('token')}
 		payload.queries = this.filterPairs().map(p => ({
 			find:buildQueries(this.props.filters.filter(f => hasPair(f,p))),
 			select:this.props.fields.filter(f => f.checked && hasPair(f,p)).map(f => f.name),
 			store:p.store,
 			category:p.category,
-			name:this.state.name
+			name:this.state.name,
+			sort:this.props.sort.name && hasPair(this.props.fields.find(f => f.name === this.props.sort.name), p) && this.props.sort  
 		}))
 		this.setState({loading:true})
 		await lambda.invoke({
