@@ -127,22 +127,46 @@ class Stores extends Component {
 }
 
 class Table extends Component {
+	constructor(props){
+		super(props)
+		this.state.offset = 0
+		this.state.pageSize = 20
+	}
+	prev(){
+		this.state.offset -= this.state.pageSize
+		this.setState({offset:Math.max(0,this.state.offset)})
+	}
+	next(){
+		this.state.offset += this.state.pageSize
+		this.setState({offset:Math.min(this.props.data.length-1,this.state.offset)})
+	}
 	render(){
 		const data = this.props.data
 		const coeff = (this.props.sort.desc ? -1 : 1)
 		if(this.props.sort.name){
 			data.sort((a,b) => a[this.props.sort.name] > b[this.props.sort.name] ? 1*coeff : -1*coeff)
 		}
-		return h('table',{class:`table table-striped ${this.props.fields.length > 6 ? 'table-scroll' : ''}`,style:'height:30em ; overflow-y:auto'},
-			h('thead',undefined,
-				h('tr',undefined,
-					this.props.fields.map(f => h('th',undefined,f.name))
+		return h('div',undefined,
+			h('table',{class:`table table-striped ${this.props.fields.length > 6 ? 'table-scroll' : ''}`,style:'height:30em ; overflow-y:auto'},
+				h('thead',undefined,
+					h('tr',undefined,
+						this.props.fields.map(f => h('th',undefined,f.name))
+					)
+				),
+				h('tbody',undefined,
+					data.slice(this.state.offset,this.state.offset+this.state.pageSize).map(r => h('tr',undefined,
+						this.props.fields.map(f => h('td',undefined,
+							f.name === 'image' ? h('img',{class:'img-responsive',src:r[f.name]}) : r[f.name]
+						))
+					))
 				)
 			),
-			h('tbody',undefined,
-				data.map(r => h('tr',undefined,
-					this.props.fields.map(f => h('td',undefined,r[f.name]))
-				))
+			h('div',{class:'columns'},
+				h('div',{class:'column col-4 col-mx-auto btn-group'},
+					h('button',{class:'btn',disabled:!this.state.offset,onClick:e => this.prev()},'Prev'),
+					h('label',{class:'form-label ml-1 mr-1'},`${Math.floor(this.state.offset/this.state.pageSize)+1}/${Math.round(this.props.data.length/this.state.pageSize)}`),
+					h('button',{class:'btn',disabled:(this.state.offset+this.state.pageSize) >= this.props.data.length,onClick:e => this.next()},'Next')
+				)
 			)
 		)
 	}
@@ -207,7 +231,7 @@ class Filter extends Component {
 				type:['number']
 			}
 		]
-		this.state.fieldOrder = ['name','salePrice','regPrice','link']
+		this.state.fieldOrder = ['image','name','salePrice','regPrice','link']
 		this.state.fieldOrder = this.state.fieldOrder.reduce((a,c,i) => {
 			a.set(c,i+1)
 			return a
@@ -277,7 +301,7 @@ class Filter extends Component {
 				h('div',{class:'mt-1'},
 					this.props.filters.map((f,i) => h('div',{class:'columns'},
 						h('div',{class:'column col-3'},
-							h('select',{class:'form-select',value:f.name,onInput:e => this.updateFilter(f,e.target.value,'name')},this.props.fields.map(o => 
+							h('select',{class:'form-select',value:f.name,onInput:e => this.updateFilter(f,e.target.value,'name')},this.props.fields.filter(f => f.name !== 'image').map(o => 
 								h('option',{value:o.name},o.name)
 							))
 						),
