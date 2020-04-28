@@ -59,6 +59,8 @@ const hasPair = (filter,pair) => {
 	return filter.from.find(f => f.category === pair.category && f.store === pair.store)
 }
 
+/**********************************************/
+
 class Loading extends Component {
 	render(){
 		return h('div',undefined,
@@ -80,7 +82,7 @@ class Categories extends Component {
 			h('div',{class:'form-group mt-2 text-center'},
 				h('input',{class:'form-input',onInput:e => this.setState({search:e.target.value})})
 			),
-			h('ul',{class:'menu text-center'},
+			h('ul',{class:'menu text-center', style:'height:20em ; overflow-y: auto'},
 				this.props.categories.filter(p => this.search(p)).map(p => h('li',{class:'menu-item'},
 					h('label',{class:"form-checkbox"},
 				    	h('input',{type:"checkbox",checked:p.checked,onInput:e => this.toggle(p,e)}),
@@ -111,7 +113,7 @@ class Stores extends Component {
 			h('div',{class:'form-group mt-2 text-center'},
 				h('input',{class:'form-input',onInput:e => this.setState({search:e.target.value})})
 			),
-			h('ul',{class:'menu text-center'},
+			h('ul',{class:'menu text-center',style:'height: 20em ; overflow-y: auto'},
 				this.state.stores.filter(p => this.search(p)).map(p => h('li',{class:'menu-item'},
 					h('label',{class:"form-checkbox"},
 				    	h('input',{type:"checkbox",checked:p.checked,onInput:e => this.toggle(p,e)}),
@@ -131,7 +133,7 @@ class Table extends Component {
 		if(this.props.sort.name){
 			data.sort((a,b) => a[this.props.sort.name] > b[this.props.sort.name] ? 1*coeff : -1*coeff)
 		}
-		return h('table',{class:'table table-striped table-scroll',style:'height:30em ; overflow-y:auto'},
+		return h('table',{class:`table table-striped ${this.props.fields.length > 6 ? 'table-scroll' : ''}`,style:'height:30em ; overflow-y:auto'},
 			h('thead',undefined,
 				h('tr',undefined,
 					this.props.fields.map(f => h('th',undefined,f.name))
@@ -205,16 +207,23 @@ class Filter extends Component {
 				type:['number']
 			}
 		]
+		this.state.fieldOrder = ['name','salePrice','regPrice','link']
+		this.state.fieldOrder = this.state.fieldOrder.reduce((a,c,i) => {
+			a.set(c,i+1)
+			return a
+		}, new Map())
 		this.state.query = undefined
 	}
 	async componentDidMount(){
-		const fields = new Map()
+		let fields = new Map()
 		this.setState({loading:true})
 		for(let i = 0 ; i < this.state.pairs.length ; i++){
 			const p = this.state.pairs[i]
 			const r = await listFiles(this.props.apiKey, p.store, p.category)
 			if(r.files.length){
 				const f = await getFile(this.props.apiKey, r.files[0].id)
+				f.date = new Date(f.date)
+				this.state.lastUpdated = this.state.lastUpdated > f.date ? this.state.lastUpdated : f.date
 				if(f.items.length){
 					Object.keys(f.items[0]).forEach(k => {
 						fields.set(k, fields.get(k) || {from:[],type:typeof f.items.find(i => i[k] !== undefined && i[k] !== null)[k]})
@@ -224,8 +233,10 @@ class Filter extends Component {
 				}
 			}
 		}
-		this.setState({loading:false})
-		this.props.refresh({fields:Array.from(fields.entries()).map(f => ({name:f[0],from:f[1].from,type:f[1].type,checked:true}))})
+		this.setState({loading:false,lastUpdated:this.state.lastUpdated.toLocaleString()})
+		fields = Array.from(fields.entries()).map(f => ({name:f[0],from:f[1].from,type:f[1].type,checked:true}))
+		fields.sort((a,b) => (this.state.fieldOrder.get(a.name) || Number.MAX_SAFE_INTEGER ) - (this.state.fieldOrder.get(b.name) || Number.MAX_SAFE_INTEGER ))
+		this.props.refresh({fields})
 	}
 	toggle(f,e){
 		f.checked = e.target.checked
@@ -310,7 +321,7 @@ class Filter extends Component {
 					    )
 					)
 				),
-				h('div',{class:'divider text-center','data-content':`Data Preview (${data.length} results)`}),
+				h('div',{class:'divider text-center','data-content':`Data Preview (${data.length} results) (Last Updated: ${this.state.lastUpdated})`}),
 				h(Table,{fields:this.props.fields.filter(f => f.checked), data:data, sort:this.props.sort})
 			)
 		)
