@@ -75,19 +75,20 @@ class Categories extends Component {
 		this.props.refresh()
 	}
 	search(p){
-		return !this.state.search || p.name.toLowerCase().includes(this.state.search)
+		return !this.state.search || p.name.toLowerCase().includes(this.state.search.toLowerCase())
 	}
 	render(){
 		return h('div',undefined,
-			h('div',{class:'form-group mt-2 text-center'},
-				h('input',{class:'form-input',onInput:e => this.setState({search:e.target.value})})
+			h('div',{class:'form-group mt-2'},
+				h('input',{class:'form-input text-center',onInput:e => this.setState({search:e.target.value})})
 			),
 			h('ul',{class:'menu text-center', style:'height:20em ; overflow-y: auto'},
 				this.props.categories.filter(p => this.search(p)).map(p => h('li',{class:'menu-item'},
 					h('label',{class:"form-checkbox"},
 				    	h('input',{type:"checkbox",checked:p.checked,onInput:e => this.toggle(p,e)}),
 				    	h('i',{class:"form-icon"}),
-				    	p.name
+				    	this.props.config && h('img',{class:'img-responsive d-inline-flex mr-1',style:'height:2em',src:this.props.config.categories.images[p.name]}),
+				    	`${p.name} (${p.stores.join(', ')})`
 				    )
 				))
 			)
@@ -100,25 +101,29 @@ class Stores extends Component {
 		super(props)
 		this.state.categories = this.props.categories.filter(c => c.checked)
 		this.state.stores = this.props.stores.filter(s => this.state.categories.find(c => s.categories.has(c.name)))
+		if(this.state.stores.length === 1){
+			this.state.stores.forEach(s => s.checked = true)
+			this.props.refresh()
+		}
 	}
 	toggle(p,e){
 		p.checked = e.target.checked
 		this.props.refresh()
 	}
 	search(p){
-		return !this.state.search || p.name.toLowerCase().includes(this.state.search)
+		return !this.state.search || p.name.toLowerCase().includes(this.state.search.toLowerCase())
 	}
 	render(){
 		return h('div',undefined,
 			h('div',{class:'form-group mt-2 text-center'},
-				h('input',{class:'form-input',onInput:e => this.setState({search:e.target.value})})
+				h('input',{class:'form-input text-center',onInput:e => this.setState({search:e.target.value})})
 			),
 			h('ul',{class:'menu text-center',style:'height: 20em ; overflow-y: auto'},
 				this.state.stores.filter(p => this.search(p)).map(p => h('li',{class:'menu-item'},
 					h('label',{class:"form-checkbox"},
 				    	h('input',{type:"checkbox",checked:p.checked,onInput:e => this.toggle(p,e)}),
 				    	h('i',{class:"form-icon"}),
-				    	p.name
+				    	this.props.config && h('img',{class:'img-responsive d-inline-flex mr-1',title:p.name,style:'height:3em',src:this.props.config.stores.images[p.name],alt:p.name})
 				    )
 				))
 			)
@@ -243,9 +248,9 @@ class Filter extends Component {
 		this.setState({loading:true})
 		for(let i = 0 ; i < this.state.pairs.length ; i++){
 			const p = this.state.pairs[i]
-			const r = await listFiles(this.props.apiKey, p.store, p.category)
+			const r = await listFiles(this.props.config.apiKey, p.store, p.category)
 			if(r.files.length){
-				const f = await getFile(this.props.apiKey, r.files[0].id)
+				const f = await getFile(this.props.config.apiKey, r.files[0].id)
 				f.date = new Date(f.date)
 				this.state.lastUpdated = this.state.lastUpdated > f.date ? this.state.lastUpdated : f.date
 				if(f.items.length){
@@ -405,7 +410,7 @@ class Auth extends Component {
 		return h('div',undefined,
 			h('form',{class:'form-group text-center',onSubmit:e => this.auth(e)},
 				h('label',{class:'form-label'},'Enter Email'),
-				h('input',{class:'form-input',onInput:e => this.setState({email:e.target.value})}),
+				h('input',{class:'form-input text-center',onInput:e => this.setState({email:e.target.value})}),
 				h('button',{class:`btn mt-1 ${this.state.loading ? 'loading' : ''}`},'Submit')
 			)
 		)
@@ -455,7 +460,8 @@ class Container extends Component {
 			p = p.partitionKey.split('|')
 			stores.set(p[0], stores.get(p[0]) || {name:p[0], categories:new Set()})
 			stores.get(p[0]).categories.add(p[1])
-			categories.add(p[1])
+			categories.set(p[1], categories.get(p[1]) || {name:p[1], stores:new Set()})
+			categories.get(p[1]).stores.add(p[0])
 		})
 		if(r.LastEvaluatedKey){
 			this.getPulls(r.LastEvaluatedKey,stores,categories)
@@ -463,24 +469,26 @@ class Container extends Component {
 	}
 	async getConfig(){
 		return await dynamodb.get({
-			TableName:'shopwatch_queries',
+			TableName:'configs',
 			Key:{
-				partitionKey:'_config',
-				sortKey:'_config'
+				partitionKey:'shopwatch'
 			}
 		}).promise()
 	}
 	async componentDidMount(){
-		const categories = new Set()
+		const categories = new Map()
 		const stores = new Map()
 		this.setState({loading:true})
 		await this.getPulls(undefined,stores,categories)
 		this.setState({loading:false})
 		this.setState({
-			categories:Array.from(categories).map(c => ({name:c})),
-			stores:Array.from(stores.values())
+			categories:Array.from(categories.values()).map(c => {
+				c.stores = Array.from(c.stores)
+				return c
+			}),
+			stores:Array.from(stores.values()),
+			config:(await this.getConfig()).Item
 		})
-		this.state.apiKey = (await this.getConfig()).Item.apiKey
 	}
 	hasAuth(){
 		return window.localStorage.getItem('email') && window.localStorage.getItem('token')
@@ -493,12 +501,12 @@ class Container extends Component {
 				h('button',{class:'btn',disabled:!screen.good(),onClick:e => this.next()},'Next')
 			),
 			this.state.loading ? h(Loading) : h(screen.screen,{
-				apiKey:this.state.apiKey, 
 				filters:this.state.filters,
 				categories:this.state.categories, 
 				stores:this.state.stores, 
 				fields:this.state.fields,
 				sort:this.state.sort,
+				config:this.state.config,
 				refresh:(state) => this.setState(state || this.state)
 			})
 		)

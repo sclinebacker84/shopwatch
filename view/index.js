@@ -37,7 +37,7 @@ class Auth extends Component {
 		return h('div',undefined,
 			h('form',{class:'form-group text-center',onSubmit:e => this.auth(e)},
 				h('label',{class:'form-label'},'Enter Email'),
-				h('input',{class:'form-input',onInput:e => this.setState({email:e.target.value})}),
+				h('input',{class:'form-input text-center',onInput:e => this.setState({email:e.target.value})}),
 				h('button',{class:`btn mt-1 ${this.state.loading ? 'loading' : ''}`},'Submit')
 			)
 		)
