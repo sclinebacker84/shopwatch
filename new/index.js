@@ -75,12 +75,22 @@ class Categories extends Component {
 		this.props.refresh()
 	}
 	search(p){
-		return !this.state.search || p.name.toLowerCase().includes(this.state.search.toLowerCase())
+		return !this.state.search || p.name.toLowerCase().includes(this.state.search.toLowerCase()) || p.stores.find(s => s.toLowerCase().includes(this.state.search.toLowerCase()))
+	}
+
+	clearAll(){
+		this.state.search = undefined
+		this.props.categories.forEach(c => c.checked = false)
+		this.props.refresh()
 	}
 	render(){
 		return h('div',undefined,
-			h('div',{class:'form-group mt-2'},
-				h('input',{class:'form-input text-center',onInput:e => this.setState({search:e.target.value})})
+			h('div',{class:'form-group mt-2 has-icon-left'},
+				h('i',{class:'form-icon fas fa-search'}),
+				h('input',{class:'form-input text-center',value:this.state.search,placeholder:'Start typing category or store',onInput:e => this.setState({search:e.target.value})})
+			),
+			h('div',{class:'text-center'},
+				h('button',{class:'btn',onClick:e => this.clearAll()},'Clear All')
 			),
 			h('ul',{class:'menu text-center', style:'height:20em ; overflow-y: auto'},
 				this.props.categories.filter(p => this.search(p)).map(p => h('li',{class:'menu-item'},
@@ -113,10 +123,19 @@ class Stores extends Component {
 	search(p){
 		return !this.state.search || p.name.toLowerCase().includes(this.state.search.toLowerCase())
 	}
+	clearAll(){
+		this.state.search = undefined
+		this.state.stores.forEach(c => c.checked = false)
+		this.props.refresh()
+	}
 	render(){
 		return h('div',undefined,
-			h('div',{class:'form-group mt-2 text-center'},
-				h('input',{class:'form-input text-center',onInput:e => this.setState({search:e.target.value})})
+			h('div',{class:'form-group mt-2 has-icon-left'},
+				h('i',{class:'form-icon fas fa-search'}),
+				h('input',{class:'form-input text-center',value:this.state.search,placeholder:'Start typing store',onInput:e => this.setState({search:e.target.value})})
+			),
+			h('div',{class:'text-center'},
+				h('button',{class:'btn',onClick:e => this.clearAll()},'Clear All')
 			),
 			h('ul',{class:'menu text-center',style:'height: 20em ; overflow-y: auto'},
 				this.state.stores.filter(p => this.search(p)).map(p => h('li',{class:'menu-item'},
