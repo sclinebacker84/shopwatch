@@ -171,7 +171,7 @@ class Table extends Component {
 			data.sort((a,b) => a[this.props.sort.name] > b[this.props.sort.name] ? 1*coeff : -1*coeff)
 		}
 		return h('div',undefined,
-			h('table',{class:`table table-striped ${this.props.fields.length > 6 ? 'table-scroll' : ''}`,style:'height:30em ; overflow-y:auto'},
+			h('table',{class:`hide-xs table table-striped ${this.props.fields.length > 6 ? 'table-scroll' : ''}`,style:'height:30em ; overflow-y:auto'},
 				h('thead',undefined,
 					h('tr',undefined,
 						this.props.fields.map(f => h('th',undefined,f.name))
@@ -185,13 +185,26 @@ class Table extends Component {
 					))
 				)
 			),
-			h('div',{class:'columns'},
-				h('div',{class:'column col-4 col-mx-auto btn-group'},
-					h('button',{class:'btn',disabled:!this.state.offset,onClick:e => this.prev()},'Prev'),
-					h('label',{class:'form-label ml-1 mr-1'},`${Math.floor(this.state.offset/this.state.pageSize)+1}/${Math.round(this.props.data.length/this.state.pageSize)}`),
-					h('button',{class:'btn',disabled:(this.state.offset+this.state.pageSize) >= this.props.data.length,onClick:e => this.next()},'Next')
+			h('div',{class:'show-xs'},
+				data.slice(this.state.offset,this.state.offset+this.state.pageSize).map(r => 
+					h('div',{class:'card'},
+						r.image && h('div',{class:'card-image'},
+							 h('img',{class:'img-responsive',src:r.image})
+						),
+						h('div',{class:'card-header'},
+							h('div',{class:'card-title h4'},r.name)
+						),
+						h('div',{class:'card-body'},
+							h('div',{class:'card-title h6'}, `Price: ${r.salePrice}`)
+						)
+					)
 				)
-			)
+			),
+			h('div',{class:'h6 text-center'},`Page: ${Math.floor(this.state.offset/this.state.pageSize)+1}/${Math.round(this.props.data.length/this.state.pageSize)}`),
+			h('div',{class:'btn-group btn-group-block'},
+				h('button',{class:'btn',disabled:!this.state.offset,onClick:e => this.prev()},'Prev Page'),
+				h('button',{class:'btn',disabled:(this.state.offset+this.state.pageSize) >= this.props.data.length,onClick:e => this.next()},'Next Page')
+			)		
 		)
 	}
 }
@@ -362,11 +375,7 @@ class Filter extends Component {
 						)
 					),
 					h('div',{class:'column col-2'},
-						h('label',{class:"form-checkbox ml-1"},
-					    	h('input',{type:"checkbox",checked:this.props.sort.desc,onInput:e => this.updateSort('desc',e.target.checked)}),
-					    	h('i',{class:"form-icon"}),
-					    	'Descending?'
-					    )
+						h('i',{class:`form-icon fas fa-2x ${this.props.sort.desc ? 'fa-arrow-down' : 'fa-arrow-up'}`, onClick:e => this.updateSort('desc',!this.props.sort.desc)})
 					)
 				),
 				h('div',{class:'divider text-center','data-content':`Data Preview (${data.length} results) (Last Updated: ${this.state.lastUpdated})`}),
