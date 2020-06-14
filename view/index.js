@@ -100,7 +100,9 @@ class Container extends Component {
 				!!this.state.queries.find(q => q.checked) && h('div',{class:'text-center'},
 					h('button',{class:'btn',onClick:e => this.delete()},'Delete')
 				),
-				this.state.queries.map(q => h('div',{class:'card mt-2'},
+				!this.state.queries.length ? h('div',{class:'empty mt-2'},
+					h('div',{class:'h5 text-center'}, 'No Searches Found')
+				) : this.state.queries.map(q => h('div',{class:'card mt-2'},
 					h('div',{class:'card-header text-center'},
 						h('div',{class:'card-title h5'},q.name)
 					),
