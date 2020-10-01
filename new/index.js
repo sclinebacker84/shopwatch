@@ -180,7 +180,9 @@ class Table extends Component {
 				h('tbody',undefined,
 					data.slice(this.state.offset,this.state.offset+this.state.pageSize).map(r => h('tr',undefined,
 						this.props.fields.map(f => h('td',undefined,
-							f.name === 'image' ? h('img',{class:'img-responsive',src:r[f.name]}) : r[f.name]
+							f.name === 'image' ? h('a',{href:r.link,target:'_blank'},
+								h('img',{class:'img-responsive',src:r[f.name]})
+							) : r[f.name]
 						))
 					))
 				)
@@ -217,6 +219,16 @@ class Filter extends Component {
 		this.state.data.clear()
 		this.state.comparators = [
 			{
+				name:'contains the word',
+				value:'$contains',
+				type:['string']
+			},
+			{
+				name:'contains any of the following words',
+				value:'$containsAny',
+				type:['string']
+			},
+			{
 				name:'equal to',
 				value:'$eq'
 			},
@@ -231,17 +243,7 @@ class Filter extends Component {
 			{
 				name:'not in any of the following',
 				value:'$nin'
-			},
-			{
-				name:'contains the word',
-				value:'$contains',
-				type:['string']
-			},
-			{
-				name:'contains any of the following words',
-				value:'$containsAny',
-				type:['string']
-			},
+			},			
 			{
 				name:'is between',
 				value:'$between',
@@ -274,6 +276,7 @@ class Filter extends Component {
 			return a
 		}, new Map())
 		this.state.query = undefined
+		this.state.checkedFields = new Set(['image','name','salePrice','regPrice'])
 	}
 	async componentDidMount(){
 		let fields = new Map()
@@ -295,7 +298,7 @@ class Filter extends Component {
 			}
 		}
 		this.setState({loading:false,lastUpdated:this.state.lastUpdated.toLocaleString()})
-		fields = Array.from(fields.entries()).map(f => ({name:f[0],from:f[1].from,type:f[1].type,checked:true}))
+		fields = Array.from(fields.entries()).map(f => ({name:f[0],from:f[1].from,type:f[1].type,checked:this.state.checkedFields.has(f[0])}))
 		fields.sort((a,b) => (this.state.fieldOrder.get(a.name) || Number.MAX_SAFE_INTEGER ) - (this.state.fieldOrder.get(b.name) || Number.MAX_SAFE_INTEGER ))
 		this.props.refresh({fields})
 	}
@@ -304,10 +307,11 @@ class Filter extends Component {
 		this.setState(this.state)
 	}
 	addFilter(){
+		const fields = this.props.fields.filter(f => f.name !== 'image')
 		this.props.filters.push({
-			name:this.props.fields[0].name,
-			type:this.props.fields[0].type,
-			from:this.props.fields[0].from,
+			name:fields[0].name,
+			type:fields[0].type,
+			from:fields[0].from,
 			comparator:this.state.comparators.find(c => !c.type || c.type.includes(this.props.fields[0].type)).value
 		})
 		this.setState(this.state)
@@ -335,22 +339,22 @@ class Filter extends Component {
 		return h('div',undefined,
 			this.state.loading ? h(Loading) : h('div',undefined,
 				h('div',{class:'divider text-center','data-content':'Filters'}),
-				h('div',{class:'mt-1'},
-					this.props.filters.map((f,i) => h('div',{class:'columns'},
-						h('div',{class:'column col-3'},
+				h('div',{class:'mt-1 container'},
+					this.props.filters.map((f,i) => h('div',{class:'columns cell'},
+						h('div',{class:'column col-3 col-sm-12'},
 							h('select',{class:'form-select',value:f.name,onInput:e => this.updateFilter(f,e.target.value,'name')},this.props.fields.filter(f => f.name !== 'image').map(o => 
 								h('option',{value:o.name},o.name)
 							))
 						),
-						h('div',{class:'column col-3'},
+						h('div',{class:'column col-3 col-sm-12'},
 							h('select',{class:'form-select',value:f.comparator,onInput:e => this.updateFilter(f,e.target.value,'comparator')},this.state.comparators.filter(c => !c.type || c.type.includes(f.type)).map(f => 
 								h('option',{value:f.value},f.name)
 							))
 						),
-						h('div',{class:'column col-5'},
+						h('div',{class:'column col-5 col-sm-12'},
 							h('textarea',{class:'form-input',onInput:e => this.updateFilter(f,e.target.value,'value'),value:f.value})
 						),
-						h('div',{class:'column col-1'},
+						h('div',{class:'column col-1 col-sm-12 text-center'},
 							h('button',{class:'btn',onClick:e => this.removeFilter(i)},'Remove')
 						)
 					)),
