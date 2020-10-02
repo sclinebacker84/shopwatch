@@ -191,13 +191,18 @@ class Table extends Component {
 				data.slice(this.state.offset,this.state.offset+this.state.pageSize).map(r => 
 					h('div',{class:'card'},
 						r.image && h('div',{class:'card-image'},
-							 h('img',{class:'img-responsive',src:r.image})
+							h('a',{href:r.link,target:'_blank'},
+								h('img',{class:'img-responsive',src:r.image})
+							)
 						),
 						h('div',{class:'card-header'},
 							h('div',{class:'card-title h4'},r.name)
 						),
 						h('div',{class:'card-body'},
-							h('div',{class:'card-title h6'}, `Price: ${r.salePrice}`)
+							h('div',{class:'card-title h6 columns'}, 
+								r.salePrice && h('div',{class:'column col text-center'},`Sale Price: $${r.salePrice.toLocaleString()}`),
+								r.regPrice && h('div',{class:'column col text-center'},`MSRP: $${r.regPrice.toLocaleString()}`)
+							)
 						)
 					)
 				)
