@@ -14,6 +14,12 @@ const {h,render,Component} = window.preact
 const dynamodb = new AWS.DynamoDB.DocumentClient({convertEmptyValues:true})
 const lambda = new AWS.Lambda()
 
+const prettyCamel = (str) => {
+    return str.match(/^[a-z]+|[A-Z][a-z]*/g).map((x) => {
+        return x[0].toUpperCase() + x.substr(1).toLowerCase()
+    }).join(' ')
+}
+
 class Loading extends Component {
 	render(){
 		return h('div',undefined,
@@ -48,6 +54,24 @@ class Container extends Component {
 	constructor(props){
 		super(props)
 		this.state.queries = []
+		this.state.comparators = {
+			'$lte':{
+				format:v => `$${v}`,
+				label:'Less Than or Equal To'
+			},
+			'$gte':{
+				format:v => `$${v}`,
+				label:'Greater Than or Equal To'
+			},
+			'$contains':{
+				format:v => v,
+				label:'Contains the Phrase'
+			},
+			'$containsAny':{
+				format:v => v,
+				label:'Contains any of the Phrases'
+			}
+		}
 	}
 	async getQueries(key){
 		const r = await dynamodb.query({
@@ -61,7 +85,12 @@ class Container extends Component {
 				}
 			}
 		}).promise()
-		r.Items.forEach(q => q.name = q.sortKey.substring(0,q.sortKey.indexOf('|')))
+		r.Items.forEach(q => {
+			q.name = q.sortKey.substring(0,q.sortKey.indexOf('|'))
+			let [store,category] = q.partitionKey.split('|')
+			q.store = store
+			q.category = category
+		})
 		this.state.queries = this.state.queries.concat(r.Items)
 		if(r.LastEvaluatedKey){
 			this.getQueries(r.LastEvaluatedKey)
@@ -116,32 +145,31 @@ class Container extends Component {
 						),
 						h('div',{class:'divider','data-content':'Selected Fields'}),
 						h('div',undefined,
-							q.select.map(s => h('span',{class:'chip mr-1'},s))
+							q.select.map(s => h('span',{class:'chip mr-1'},prettyCamel(s)))
 						),
 						!!q.sort && [
 							h('div',{class:'divider','data-content':'Sorting'}),
 							h('div',undefined,
-								h('span',{class:'chip'},q.sort.name),
-								h('span',{class:'chip'},q.sort.order)
+								h('span',{class:'chip'},prettyCamel(q.sort.name)),
+								h('span',{class:'chip'},
+									h('i',{class:`form-icon fas ${q.sort.order === 'asc' ? 'fa-arrow-up' : 'fa-arrow-down'}`})
+								)
 							)
 						],
 						!!q.find && [
-							h('div',{class:'divider','data-content':'Filter'}),
-							h('div',{class:'columns'},
-								h('div',{class:'column col-4 col-mx-auto'},
-									h('pre',{class:'text-left',style:'height:10em ; overflow-y: auto'},
-										JSON.stringify(q.find,null,2)
-									)
+							h('div',{class:'divider','data-content':'Filters'}),
+							Object.keys(q.find).map(k => {
+								const c = Object.keys(q.find[k])[0], v = Object.values(q.find[k])[0]
+								return h('div',{class:'columns cell'},
+									h('div',{class:'col-4'},prettyCamel(k)),
+									h('div',{class:'col-4'},this.state.comparators[c].label),
+									h('div',{class:'col-4'},this.state.comparators[c].format(v))
 								)
-							)
+							})
 						]
 					),
-					h('div',{class:'card-footer text-center'},
-						h('div',{class:'columns'},
-							h('div',{class:'column col-4 col-mx-auto'},
-								h('div',{class:'h6'},q.partitionKey)
-							)
-						)
+					h('div',{class:'card-footer'},
+						h('div',{class:'h6 text-center'},`${q.category} from ${q.store}`)
 					)
 				))
 			)
