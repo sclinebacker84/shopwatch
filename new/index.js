@@ -176,6 +176,7 @@ class Table extends Component {
 		if(this.props.sort.name){
 			data.sort((a,b) => a[this.props.sort.name] > b[this.props.sort.name] ? 1*coeff : -1*coeff)
 		}
+		console.log(data)
 		return h('div',undefined,
 			h('table',{class:`hide-xs table table-striped ${this.props.fields.length > 6 ? 'table-scroll' : ''}`,style:'height:30em ; overflow-y:auto'},
 				h('thead',undefined,
@@ -193,13 +194,14 @@ class Table extends Component {
 					))
 				)
 			),
-			h('div',{class:'show-xs'},
+			h('div',{class:'show-xs',style:'padding-top: 1em'},
 				data.slice(this.state.offset,this.state.offset+this.state.pageSize).map(r => 
 					h('div',{class:'card'},
 						r.image && h('div',{class:'card-image'},
-							h('a',{href:r.link,target:'_blank'},
+							h('a',{href:r.link,target:'_blank',class:'float-left'},
 								h('img',{class:'img-responsive',src:r.image})
-							)
+							),
+							this.props.config && h('img',{class:'img-responsive float-right',title:r.store,style:'height:3em',src:this.props.config.stores.images[r.store],alt:r.store})
 						),
 						h('div',{class:'card-header'},
 							h('div',{class:'card-title h4'},r.name)
@@ -278,6 +280,10 @@ class Filter extends Component {
 					Object.keys(f.items[0]).forEach(k => {
 						fields.set(k, fields.get(k) || {from:[],type:typeof f.items.find(i => i[k] !== undefined && i[k] !== null)[k]})
 						fields.get(k).from.push(p)
+					})
+					f.items.forEach(r => {
+						r.store = f.store
+						r.category = f.category
 					})
 					this.state.data.insert(f.items)
 				}
@@ -379,7 +385,7 @@ class Filter extends Component {
 					)
 				),
 				h('div',{class:'divider text-center','data-content':`Data Preview (${data.length} results) (Last Updated: ${this.state.lastUpdated})`}),
-				h(Table,{fields:this.props.fields.filter(f => f.checked), data:data, sort:this.props.sort})
+				h(Table,{fields:this.props.fields.filter(f => f.checked), data:data, sort:this.props.sort, config:this.props.config})
 			)
 		)
 	}
@@ -472,7 +478,7 @@ class Container extends Component {
 		this.state.stores = []
 		this.state.filters = []
 		this.state.fields = []
-		this.state.sort = {}
+		this.state.sort = {name:'salePrice', desc:false}
 	}
 	next(){
 		this.setState({screenId:Math.min(this.state.screenId+1, this.state.screens.length-1)})
