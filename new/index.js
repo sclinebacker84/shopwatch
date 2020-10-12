@@ -1,9 +1,12 @@
-const google = {parentFolder:'1DEa44BMHpuygfgfndVnQNoXPqCNoj_hM',url:'https://www.googleapis.com/drive/v3'}
-const params = new URLSearchParams(window.location.search)
-if(params.get('token') && params.get('email')){
-	window.localStorage.setItem('token', params.get('token'))
-	window.localStorage.setItem('email', params.get('email'))
-	history.pushState({},undefined,window.location.href.replace(window.location.search,''))
+const google = {
+	drive:{
+		parentFolder:'1DEa44BMHpuygfgfndVnQNoXPqCNoj_hM',
+		url:'https://www.googleapis.com/drive/v3'
+	},
+	auth:{
+		scope:'email',
+		discoveryDocs:["https://www.googleapis.com/discovery/v1/apis/people/v1/rest"]
+	}
 }
 
 const IdentityPoolId = 'us-east-1:4bc785c7-871b-4ebe-bd34-22e168724794'
@@ -19,13 +22,18 @@ const db = new loki('db')
 db.addCollection('coll')
 
 const listFiles = async (apiKey, store, category) => {
-	const params = `key=${apiKey}&spaces=drive&pageSize=1&q='${google.parentFolder}' in parents and name contains '${store}__${category}'`
-	return await fetch(google.url+'/files?'+params).then(r => r.json())
+	const params = `key=${apiKey}&spaces=drive&pageSize=1&q='${google.drive.parentFolder}' in parents and name contains '${store}__${category}'`
+	return await fetch(google.drive.url+'/files?'+params).then(r => r.json())
 }
 
 const getFile = async (apiKey, id) => {
 	const params = `key=${apiKey}&alt=media`
-	return await fetch(google.url+/files/+id+'?'+params).then(r => r.json())
+	return await fetch(google.drive.url+'?'+params).then(r => r.json())
+}
+
+const auth = async (apiKey, clientId) => {
+	const params = `key=${apiKey}&alt=media`
+	return await fetch(google.auth.url+/files/+id+'?'+params).then(r => r.json())
 }
 
 const buildQueries = (filters) => {
@@ -431,22 +439,15 @@ class Review extends Component{
 }
 
 class Auth extends Component {
-	async auth(e){
-		e.preventDefault()
-		this.setState({loading:true})
-		await lambda.invoke({
-			FunctionName:'auth',
-			Payload:JSON.stringify({email:this.state.email,url:window.location.href,name:'Shopwatch'})
-		}).promise()
-		this.setState({loading:false})
-		alert('Done!')
+	async signIn(e){
+		await gapi.auth2.getAuthInstance().signIn()
 	}
 	render(){
-		return h('div',undefined,
-			h('form',{class:'form-group text-center',onSubmit:e => this.auth(e)},
-				h('label',{class:'form-label'},'Enter Email'),
-				h('input',{class:'form-input text-center',onInput:e => this.setState({email:e.target.value})}),
-				h('button',{class:`btn mt-1 ${this.state.loading ? 'loading' : ''}`},'Submit')
+		return h('div',{class:'columns mt-2'},
+			h('div',{class:'col-2 col-mx-auto'},
+				h('div',{class:'btn-group btn-group-blk'},
+					h('button',{class:'btn',onClick:e => this.signIn(e)},'Sign In')
+				)
 			)
 		)
 	}
@@ -510,6 +511,11 @@ class Container extends Component {
 			}
 		}).promise()
 	}
+	async signIn(isSignedIn){
+		if(isSignedIn){
+			this.setState({email:gapi.auth2.getAuthInstance().currentUser.get().getBasicProfile().getEmail()})
+		}
+	}
 	async componentDidMount(){
 		const categories = new Map()
 		const stores = new Map()
@@ -524,9 +530,17 @@ class Container extends Component {
 			stores:Array.from(stores.values()),
 			config:(await this.getConfig()).Item
 		})
+		await gapi.client.init({
+			apiKey:this.state.config.apiKey,
+			clientId:this.state.config.clientId,
+			scope:google.auth.scope,
+			discoveryDocs:google.auth.discoveryDocs
+		})
+		gapi.auth2.getAuthInstance().isSignedIn.listen((isSignedIn) => this.signIn(isSignedIn))
+		this.signIn(gapi.auth2.getAuthInstance().isSignedIn.get())
 	}
 	hasAuth(){
-		return window.localStorage.getItem('email') && window.localStorage.getItem('token')
+		return gapi.auth2.getAuthInstance() && gapi.auth2.getAuthInstance().isSignedIn.get()
 	}
 	content(){
 		const screen = this.state.screens[this.state.screenId]
@@ -547,8 +561,12 @@ class Container extends Component {
 		)
 	}
 	render(){
-		return this.hasAuth() ? this.content() : h(Auth)
+		return this.hasAuth() ? this.content() : h(Auth, {gAuth:this.state.gAuth})
 	}
 }
 
-document.addEventListener('DOMContentLoaded', () => render(h(Container), document.body))
+document.addEventListener('DOMContentLoaded', () => {
+	gapi.load('client:auth2', () => {
+		render(h(Container), document.body)
+	})
+})
