@@ -1,56 +1,4 @@
-const params = new URLSearchParams(window.location.search)
-if(params.get('token') && params.get('email')){
-	window.localStorage.setItem('token', params.get('token'))
-	window.localStorage.setItem('email', params.get('email'))
-	history.pushState({},undefined,window.location.href.replace(window.location.search,''))
-}
-
-const IdentityPoolId = 'us-east-1:4bc785c7-871b-4ebe-bd34-22e168724794'
-AWS.config.region = 'us-east-1'
-AWS.config.credentials = new AWS.CognitoIdentityCredentials({IdentityPoolId})
-
-const {h,render,Component} = window.preact
-
-const dynamodb = new AWS.DynamoDB.DocumentClient({convertEmptyValues:true})
-const lambda = new AWS.Lambda()
-
-const prettyCamel = (str) => {
-    return str.match(/^[a-z]+|[A-Z][a-z]*/g).map((x) => {
-        return x[0].toUpperCase() + x.substr(1).toLowerCase()
-    }).join(' ')
-}
-
-class Loading extends Component {
-	render(){
-		return h('div',undefined,
-			h('div',{class:'h4 loading'})
-		)
-	}
-}
-
-class Auth extends Component {
-	async auth(e){
-		e.preventDefault()
-		this.setState({loading:true})
-		await lambda.invoke({
-			FunctionName:'auth',
-			Payload:JSON.stringify({email:this.state.email,url:window.location.href,name:'Shopwatch'})
-		}).promise()
-		this.setState({loading:false})
-		alert('Done!')
-	}
-	render(){
-		return h('div',undefined,
-			h('form',{class:'form-group text-center',onSubmit:e => this.auth(e)},
-				h('label',{class:'form-label'},'Enter Email'),
-				h('input',{class:'form-input text-center',onInput:e => this.setState({email:e.target.value})}),
-				h('button',{class:`btn mt-1 ${this.state.loading ? 'loading' : ''}`},'Submit')
-			)
-		)
-	}
-}
-
-class Container extends Component {
+class Container extends Common {
 	constructor(props){
 		super(props)
 		this.state.queries = []
@@ -74,37 +22,23 @@ class Container extends Component {
 		}
 	}
 	async getQueries(key){
-		const r = await dynamodb.query({
-			TableName:'shopwatch_queries',
-			IndexName:'email-index',
-			ExclusiveStartKey:key,
-			KeyConditions:{
-				'email':{
-					ComparisonOperator:'EQ',
-					AttributeValueList:[window.localStorage.getItem('email')]
-				}
-			}
+		this.setState({loading:true})
+		const res = await lambda.invoke({
+			FunctionName:'shopwatch_get_queries',
+			Payload:JSON.stringify({
+				token:google.auth.token()
+			})
 		}).promise()
-		r.Items.forEach(q => {
-			q.name = q.sortKey.substring(0,q.sortKey.indexOf('|'))
-			let [store,category] = q.partitionKey.split('|')
-			q.store = store
-			q.category = category
-		})
-		this.state.queries = this.state.queries.concat(r.Items)
-		if(r.LastEvaluatedKey){
-			this.getQueries(r.LastEvaluatedKey)
+		this.setState({loading:false, queries:JSON.parse(res.Payload)})
+	}
+	async signIn(isSignedIn){
+		super.signIn(isSignedIn)
+		if(isSignedIn){
+			await this.getQueries()
 		}
 	}
 	async componentDidMount(){
-		if(this.hasAuth()){
-			this.setState({loading:true})
-			await this.getQueries()
-			this.setState({loading:false})
-		}
-	}
-	hasAuth(){
-		return window.localStorage.getItem('email') && window.localStorage.getItem('token')
+		await super.componentDidMount()
 	}
 	async delete(){
 		this.setState({loading:true})
@@ -112,10 +46,9 @@ class Container extends Component {
 			FunctionName:'shopwatch_delete_query',
 			Payload:JSON.stringify({
 				queries:this.state.queries.filter(q => q.checked).map(q => ({partitionKey:q.partitionKey,sortKey:q.sortKey, email:q.email})),
-				token:window.localStorage.getItem('token')
+				token:google.auth.token()
 			})
 		}).promise()
-		this.state.queries = []
 		await this.getQueries()
 		this.setState({loading:false})
 	}
@@ -175,9 +108,10 @@ class Container extends Component {
 			)
 		)
 	}
-	render(){
-		return this.hasAuth() ? this.content() : h(Auth)
-	}
 }
 
-document.addEventListener('DOMContentLoaded', () => render(h(Container), document.body))
+document.addEventListener('DOMContentLoaded', () => {
+	gapi.load('client:auth2', () => {
+		render(h(Container), document.body)
+	})
+})
