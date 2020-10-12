@@ -78,7 +78,10 @@ const prettyCamel = (str) => {
 
 class Common extends Component {
 	render(){
-		return this.hasAuth() ? this.content() : h(Auth)
+		return h('div',{class:'container'},
+			h(Header),
+			this.hasAuth() ? this.content() : h(Auth)
+		)
 	}
 	async signIn(isSignedIn){
 		if(isSignedIn){
@@ -106,6 +109,22 @@ class Common extends Component {
 	}
 }
 
+class Header extends Component {
+	render(){
+		return h('div',{class:'navbar bg-secondary mb-2'},
+			h('div',{class:'navbar-section text-center'},
+				h('a',{href:'/new'},'New')
+			),
+			h('div',{class:'navbar-center'},
+				h('img',{class:'img-responsive',style:'height: 3em',src:'../logo.jpg'})
+			),
+			h('div',{class:'navbar-section text-center'},
+				h('a',{href:'/view'},'View')
+			)
+		)
+	}
+}
+
 class Loading extends Component {
 	render(){
 		return h('div',undefined,
@@ -119,14 +138,10 @@ class Auth extends Component {
 		await google.auth.get().signIn()
 	}
 	render(){
-		return h('div',{class:'columns mt-2'},
-			h('div',{class:'col-2 col-mx-auto'},
-				h('div',{class:'btn-group btn-group-blk'},
-					h('button',{class:'btn',onClick:e => this.googleSignIn(e)},
-						h('i',{class:'fab fa-google mr-1'}),
-						'Sign In'
-					)
-				)
+		return h('div',{class:'btn-group btn-group-block'},
+			h('button',{class:'btn',onClick:e => this.googleSignIn(e)},
+				h('i',{class:'fab fa-google mr-1'}),
+				'Sign In'
 			)
 		)
 	}
