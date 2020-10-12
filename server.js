@@ -2,6 +2,6 @@ const express = require('express')
 
 const app = express()
 
-app.use(express.static('.'))
+app.use('/shopwatch', express.static('.'))
 
-app.listen(80, () => console.log('started'))
+app.listen(8080, () => console.log('started'))

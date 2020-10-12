@@ -5,7 +5,7 @@ const google = {
 	},
 	auth:{
 		scope:'email',
-		get:() => gapi.auth2.getAuthInstance(),
+		get:() => google.auth.gAuth,
 		token:() => google.auth.get().currentUser.get().getAuthResponse().id_token
 	}
 }
@@ -80,7 +80,7 @@ class Common extends Component {
 	render(){
 		return h('div',{class:'container'},
 			h(Header),
-			this.hasAuth() ? this.content() : h(Auth)
+			google.auth.get() === undefined ? h(Loading) : this.hasAuth() ? this.content() : h(Auth)
 		)
 	}
 	async signIn(isSignedIn){
@@ -96,8 +96,7 @@ class Common extends Component {
 			}
 		}).promise()
 		this.setState({config:config.Item})
-		await gapi.client.init({
-			apiKey:this.state.config.apiKey,
+		google.auth.gAuth = await gapi.auth2.init({
 			clientId:this.state.config.clientId,
 			scope:google.auth.scope
 		})
