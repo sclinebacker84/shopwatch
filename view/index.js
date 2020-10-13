@@ -60,22 +60,27 @@ class Container extends Common {
 		return h('div',{class:'container'},
 			this.state.loading ? h(Loading) : h('div',undefined,
 				!!this.state.queries.find(q => q.checked) && h('div',{class:'text-center'},
-					h('button',{class:'btn',onClick:e => this.delete()},'Delete')
+					h('button',{class:'btn',onClick:e => this.delete()},`Delete ${this.state.queries.filter(q => q.checked).length} Selected`)
 				),
 				!this.state.queries.length ? h('div',{class:'empty mt-2'},
 					h('div',{class:'h5 text-center'}, 'No Searches Found')
 				) : this.state.queries.map(q => h('div',{class:'card mt-2'},
-					h('div',{class:'card-header text-center'},
-						h('div',{class:'card-title h5'},q.name)
+					h('div',{class:'card-header'},
+						h('div',{class:'columns'},
+							h('div',{class:'col-4'}),
+							h('div',{class:'col-4'},
+								h('div',{class:'card-title h5 text-center'},q.name)
+							),
+							h('div',{class:'col-4'},
+								h('label',{class:"form-checkbox float-right"},
+							    	h('input',{type:"checkbox",checked:q.checked,onInput:e => this.select(q,e)}),
+							    	h('i',{class:"form-icon"}),
+							    	h('span',undefined,'Delete?')
+							    )
+							)
+						)
 					),
 					h('div',{class:'card-body text-center'},
-						h('div',undefined,
-							h('label',{class:"form-checkbox d-inline"},
-						    	h('input',{type:"checkbox",checked:q.checked,onInput:e => this.select(q,e)}),
-						    	h('i',{class:"form-icon"}),
-						    	'Select for Deletion?'
-						    )
-						),
 						h('div',{class:'divider','data-content':'Selected Fields'}),
 						h('div',undefined,
 							q.select.map(s => h('span',{class:'chip mr-1'},prettyCamel(s)))
@@ -93,7 +98,7 @@ class Container extends Common {
 							h('div',{class:'divider','data-content':'Filters'}),
 							Object.keys(q.find).map(k => {
 								const c = Object.keys(q.find[k])[0], v = Object.values(q.find[k])[0]
-								return h('div',{class:'columns cell'},
+								return h('div',{class:'columns cell mt-1'},
 									h('div',{class:'col-4'},prettyCamel(k)),
 									h('div',{class:'col-4'},this.state.comparators[c].label),
 									h('div',{class:'col-4'},this.state.comparators[c].format(v))

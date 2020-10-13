@@ -110,15 +110,15 @@ class Common extends Component {
 
 class Header extends Component {
 	render(){
-		return h('div',{class:'navbar bg-secondary mb-2'},
+		return h('div',{class:'navbar bg-dark mb-2'},
 			h('div',{class:'navbar-section text-center'},
-				h('a',{href:'/shopwatch/new'},'New')
+				h('a',{href:'/shopwatch/new',class:'text-light'},'New')
 			),
 			h('div',{class:'navbar-center'},
 				h('img',{class:'img-responsive',style:'height: 3em',src:'../logo.jpg'})
 			),
 			h('div',{class:'navbar-section text-center'},
-				h('a',{href:'/shopwatch/view'},'View')
+				h('a',{href:'/shopwatch/view', class:'text-light'},'View')
 			)
 		)
 	}

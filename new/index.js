@@ -23,10 +23,10 @@ class Categories extends Component {
 			),
 			h('ul',{class:'menu text-center', style:'height:20em ; overflow-y: auto'},
 				this.props.categories.filter(p => this.search(p)).map(p => h('li',{class:'menu-item'},
-					h('label',{class:"form-checkbox"},
+					h('label',{class:"form-checkbox d-inline-flex"},
 				    	h('input',{type:"checkbox",checked:p.checked,onInput:e => this.toggle(p,e)}),
 				    	h('i',{class:"form-icon"}),
-				    	this.props.config && h('img',{class:'img-responsive d-inline-flex mr-1',style:'height:2em',src:this.props.config.categories.images[p.name]}),
+				    	this.props.config && h('img',{class:'img-responsive mr-1',style:'height:2em',src:this.props.config.categories.images[p.name]}),
 				    	`${p.name} (${p.stores.join(', ')})`
 				    )
 				))
@@ -68,10 +68,10 @@ class Stores extends Component {
 			),
 			h('ul',{class:'menu text-center',style:'height: 20em ; overflow-y: auto'},
 				this.state.stores.filter(p => this.search(p)).map(p => h('li',{class:'menu-item'},
-					h('label',{class:"form-checkbox"},
+					h('label',{class:"form-checkbox d-inline-flex"},
 				    	h('input',{type:"checkbox",checked:p.checked,onInput:e => this.toggle(p,e)}),
 				    	h('i',{class:"form-icon"}),
-				    	this.props.config && h('img',{class:'img-responsive d-inline-flex mr-1',title:p.name,style:'height:3em',src:this.props.config.stores.images[p.name],alt:p.name})
+				    	this.props.config && h('img',{class:'img-responsive mr-1',title:p.name,style:'height:3em',src:this.props.config.stores.images[p.name],alt:p.name})
 				    )
 				))
 			)
@@ -83,14 +83,13 @@ class Table extends Component {
 	constructor(props){
 		super(props)
 		this.state.offset = 0
-		this.state.pageSize = 20
 	}
 	prev(){
-		this.state.offset -= this.state.pageSize
+		this.state.offset -= this.props.config.preview.pageSize
 		this.setState({offset:Math.max(0,this.state.offset)})
 	}
 	next(){
-		this.state.offset += this.state.pageSize
+		this.state.offset += this.props.config.preview.pageSize
 		this.setState({offset:Math.min(this.props.data.length-1,this.state.offset)})
 	}
 	render(){
@@ -99,6 +98,7 @@ class Table extends Component {
 		if(this.props.sort.name){
 			data.sort((a,b) => a[this.props.sort.name] > b[this.props.sort.name] ? 1*coeff : -1*coeff)
 		}
+		const pages = Math.ceil(this.props.data.length/this.props.config.preview.pageSize)
 		return h('div',undefined,
 			h('table',{class:`hide-xs table table-striped ${this.props.fields.length > 6 ? 'table-scroll' : ''}`,style:'height:30em ; overflow-y:auto'},
 				h('thead',undefined,
@@ -107,7 +107,7 @@ class Table extends Component {
 					)
 				),
 				h('tbody',undefined,
-					data.slice(this.state.offset,this.state.offset+this.state.pageSize).map(r => h('tr',undefined,
+					data.slice(this.state.offset,this.state.offset+this.props.config.preview.pageSize).map(r => h('tr',undefined,
 						this.props.fields.map(f => h('td',undefined,
 							f.name === 'image' ? h('a',{href:r.link,target:'_blank'},
 								h('img',{class:'img-responsive',src:r[f.name]})
@@ -117,7 +117,7 @@ class Table extends Component {
 				)
 			),
 			h('div',{class:'show-xs',style:'padding-top: 1em'},
-				data.slice(this.state.offset,this.state.offset+this.state.pageSize).map(r => 
+				data.slice(this.state.offset,this.state.offset+this.props.config.preview.pageSize).map(r => 
 					h('div',{class:'card'},
 						r.image && h('div',{class:'card-image'},
 							h('a',{href:r.link,target:'_blank',class:'float-left'},
@@ -137,10 +137,10 @@ class Table extends Component {
 					)
 				)
 			),
-			h('div',{class:'h6 text-center'},`Page: ${Math.floor(this.state.offset/this.state.pageSize)+1}/${Math.ceil(this.props.data.length/this.state.pageSize)}`),
+			h('div',{class:'h6 text-center'},`Page: ${pages && Math.ceil(this.state.offset/this.props.config.preview.pageSize)+1 || 0}/${pages}`),
 			h('div',{class:'btn-group btn-group-block'},
 				h('button',{class:'btn',disabled:!this.state.offset,onClick:e => this.prev()},'Prev Page'),
-				h('button',{class:'btn',disabled:(this.state.offset+this.state.pageSize) >= this.props.data.length,onClick:e => this.next()},'Next Page')
+				h('button',{class:'btn',disabled:(this.state.offset+this.props.config.preview.pageSize) >= this.props.data.length,onClick:e => this.next()},'Next Page')
 			)		
 		)
 	}
@@ -215,6 +215,9 @@ class Filter extends Component {
 		fields.sort((a,b) => (this.state.fieldOrder.get(a.name) || Number.MAX_SAFE_INTEGER ) - (this.state.fieldOrder.get(b.name) || Number.MAX_SAFE_INTEGER ))
 		this.setState({loading:false,lastUpdated:this.state.lastUpdated.toLocaleString(),filterFields:fields.filter(f => !this.state.noFilterFields.has(f.name))})
 		this.props.refresh({fields})
+		if(this.props.filters.length){
+			this.preview()
+		}
 	}
 	toggle(f,e){
 		f.checked = e.target.checked
@@ -287,7 +290,7 @@ class Filter extends Component {
 				),
 				h('div',{class:'divider text-center','data-content':'Fields'}),
 				h('div',{class:'columns container'},
-					this.props.fields.map(f => h('div',{class:'col-xs-4 col-2'},
+					this.props.fields.map(f => h('div',{class:'col-xs-6 col-2'},
 						h('label',{class:"form-checkbox mr-1 d-inline"},
 					    	h('input',{type:"checkbox",checked:f.checked,onInput:e => this.toggle(f,e)}),
 					    	h('i',{class:"form-icon"}),
@@ -306,7 +309,7 @@ class Filter extends Component {
 						h('i',{class:`form-icon fas fa-2x ${this.props.sort.desc ? 'fa-arrow-down' : 'fa-arrow-up'}`, onClick:e => this.updateSort('desc',!this.props.sort.desc)})
 					)
 				),
-				h('div',{class:'divider text-center','data-content':`Data Preview (${data.length} results) (Last Updated: ${this.state.lastUpdated})`}),
+				h('div',{class:'divider text-center','data-content':`Results as of: ${this.state.lastUpdated}`}),
 				h(Table,{fields:this.props.fields.filter(f => f.checked), data:data, sort:this.props.sort, config:this.props.config})
 			)
 		)
