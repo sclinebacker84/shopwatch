@@ -103,7 +103,7 @@ class Table extends Component {
 			h('table',{class:`hide-xs table table-striped ${this.props.fields.length > 6 ? 'table-scroll' : ''}`,style:'height:30em ; overflow-y:auto'},
 				h('thead',undefined,
 					h('tr',undefined,
-						this.props.fields.map(f => h('th',undefined,f.name))
+						this.props.fields.map(f => h('th',undefined,prettyCamel(f.name)))
 					)
 				),
 				h('tbody',undefined,
