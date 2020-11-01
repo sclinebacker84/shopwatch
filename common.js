@@ -100,6 +100,7 @@ class Common extends Component {
 			clientId:this.state.config.clientId,
 			scope:google.auth.scope
 		})
+		this.setState(this.state)
 		google.auth.get().isSignedIn.listen((isSignedIn) => this.signIn(isSignedIn))
 		this.signIn(google.auth.get().isSignedIn.get())
 	}
